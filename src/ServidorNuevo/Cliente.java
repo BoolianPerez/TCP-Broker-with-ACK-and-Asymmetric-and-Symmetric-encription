@@ -12,7 +12,7 @@ import java.util.Scanner;
 
 public class Cliente {
     private static KeyPair par=FirmaDigital.generarparKeys();
-    private static PublicKey destino = ThreadParaCliente.exponerPublic();
+    private PublicKey destino;
     public static String enviarMensaje(String mensaje, PublicKey destino, PrivateKey yo)
     {
         try {
@@ -31,9 +31,24 @@ public class Cliente {
             throw new RuntimeException(e);
         }
     }
+    public static String[] separarString(String mensaje, char parametro){
+        String[] aux = new String[2];
+        String construir="";
+
+        for (int i=0;i<mensaje.length();i++){
+            if(mensaje.charAt(i)!=parametro){
+                construir=construir+mensaje.charAt(i);
+            } else if (mensaje.charAt(i)==parametro) {
+                aux[0]=construir;
+                construir="";
+            }
+        }
+        aux[1]=construir;
+        return aux;
+    }
     public static String recibirMensaje(String mensaje, PublicKey publico, PrivateKey privado){
         try {
-            String[] ambosMensajes=mensaje.split("|");
+            String[] ambosMensajes=separarString(mensaje,'|');
             String mensaje1=FirmaDigital.descifradoPrivate(ambosMensajes[0], privado);
             String hash=FirmaDigital.descifradoPublic(ambosMensajes[1], publico);
             String mensaje1Hasheado=FirmaDigital.hashear(mensaje1);
@@ -54,6 +69,7 @@ public class Cliente {
         return "NO SE PUEDE CONFIRMAR EL ORIGEN DEL MENSAJERO. POR LO TANTO, NO VA A RECIBIR EL MENSAJE GRACIAs";
     }
     public static void main(String[] args) throws IOException {
+        Cliente cliente1=new Cliente();
         Scanner scanner = new Scanner(System.in);
 
         System.out.print("Ingrese el puerto del servidor: ");
@@ -65,8 +81,6 @@ public class Cliente {
         System.out.print("Ingrese el tópico (TOPICA, TOPICB, TOPICC, TEATRO): ");
         String topicStr = scanner.nextLine();
 
-        System.out.println("Mensaje de Saludo");
-        String mensajeDeSaludo = scanner.nextLine();
 
         try (
                 Socket socket = new Socket("localhost", puertoServer);
@@ -75,12 +89,14 @@ public class Cliente {
                 Scanner consoleScanner = new Scanner(System.in);
 
         ) {
-            System.out.println(in.readLine());
+            out.println(FirmaDigital.publicaABase64(par.getPublic()));
+            cliente1.destino=FirmaDigital.base64APublica(in.readLine());
+            System.out.println(recibirMensaje(in.readLine(),cliente1.destino, par.getPrivate()));
             out.println(nombreCliente);
-            System.out.println(in.readLine());
+            System.out.println(recibirMensaje(in.readLine(),cliente1.destino, par.getPrivate()));
             out.println(topicStr);
 
-            out.println(FirmaDigital.publicaABase64(par.getPublic()));
+
 
             System.out.println("Conexión establecida. Puedes empezar a chatear.");
             System.out.println("Escribe 'exit' para desconectarte.");
@@ -93,13 +109,11 @@ public class Cliente {
                         String message = in.readLine();
 
                         if (message != null) {
-                            String mensajeRecibido=Cliente.recibirMensaje(message,destino, par.getPrivate());
+                            String mensajeRecibido=Cliente.recibirMensaje(message,cliente1.destino, par.getPrivate());
                             if(mensajeRecibido.equals("exit")){
                                 throw new Exception("chau");
                             }
                             else{System.out.println(mensajeRecibido);}
-                        } else{
-
                         }
                     }
                 }
@@ -110,9 +124,8 @@ public class Cliente {
             thread.start();
 
             while (true) {
-
                 String message = consoleScanner.next();
-                String nuevoMensaje = enviarMensaje(message,destino,par.getPrivate());
+                String nuevoMensaje = enviarMensaje(message,cliente1.destino,par.getPrivate());
                 out.println(nuevoMensaje);
                 if (message.equalsIgnoreCase("exit")) {
                     break;

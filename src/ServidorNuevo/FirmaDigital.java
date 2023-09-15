@@ -139,8 +139,8 @@ public class FirmaDigital {
         final MessageDigest digest = MessageDigest.getInstance("SHA-256");
         final byte[] hashbytes = digest.digest(
                 mensaje.getBytes(StandardCharsets.UTF_8));
-        String sha3Hex = bytesToHex(hashbytes);
-        return cifradoPrivate(sha3Hex,privado);
+        String shaHex = bytesToHex(hashbytes);
+        return cifradoPrivate(shaHex,privado);
     }
     public static String bytesToHex(byte[] hash) {
         StringBuilder hexString = new StringBuilder(2 * hash.length);

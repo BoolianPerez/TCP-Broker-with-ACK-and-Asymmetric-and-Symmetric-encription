@@ -4,6 +4,7 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import java.io.*;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
@@ -13,6 +14,8 @@ import java.util.HashMap;
 
 public class ThreadParaCliente extends Thread{
     private Socket clienteSocket;
+    private static final int PORT = 12345;
+    private static ArrayList<ThreadParaCliente> clients = new ArrayList<>();
     private static KeyPair par=FirmaDigital.generarparKeys();
     private Topicos topico;
     private String nombreCliente;
@@ -20,10 +23,6 @@ public class ThreadParaCliente extends Thread{
     private PrintWriter out;
     private PublicKey clientePublic;
     private ArrayList<ThreadParaCliente> clientes;
-    public static PublicKey exponerPublic()
-    {
-        return par.getPublic();
-    }
 
     public ThreadParaCliente(Socket socket, ArrayList<ThreadParaCliente> clientes) throws IOException {
         this.clienteSocket = socket;
@@ -31,11 +30,12 @@ public class ThreadParaCliente extends Thread{
         in = new BufferedReader(new InputStreamReader(clienteSocket.getInputStream()));
         out = new PrintWriter(clienteSocket.getOutputStream(), true);
     }
+
     public static String enviarMensaje(String mensaje, PublicKey destino, PrivateKey yo)
     {
         try {
             String laMensajeada=FirmaDigital.cifradoPublic(mensaje, destino);
-            String superMensaje = laMensajeada +"|||"+ FirmaDigital.encriptarYHashear(mensaje,yo);
+            String superMensaje = laMensajeada +"|"+ FirmaDigital.encriptarYHashear(mensaje,yo);
             return superMensaje;
         } catch (NoSuchPaddingException e) {
             throw new RuntimeException(e);
@@ -74,14 +74,18 @@ public class ThreadParaCliente extends Thread{
     @Override
     public void run() {
         try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            out.println("Bienvenido al servidor de chat. Por favor, elige un nombre:");
+            clientePublic=FirmaDigital.base64APublica(in.readLine());
+            out.println(FirmaDigital.publicaABase64(par.getPublic()));
+            String j="Bienvenido al servidor de chat. Por favor, elige un nombre:";
+            out.println(enviarMensaje(j,clientePublic, par.getPrivate()));
             nombreCliente = in.readLine();
-            out.println("Elige un tópico (TOPICA, TOPICB, TOPICC, TEATRO):");
+            String g="Elige un tópico (TOPICA, TOPICB, TOPICC, TEATRO):";
+            out.println(enviarMensaje(g,clientePublic, par.getPrivate()));
             String topicoStr = in.readLine();
             topico = Topicos.valueOf(topicoStr);
-            clientePublic=FirmaDigital.base64APublica(in.readLine());
-            out.println("Conexión establecida. Puedes empezar a chatear.");
+
+            String h="Conexión establecida. Puedes empezar a chatear.";
+            out.println(enviarMensaje(h,clientePublic,par.getPrivate()));
 
 
             for (ThreadParaCliente cliente : clientes) {
@@ -93,11 +97,9 @@ public class ThreadParaCliente extends Thread{
 
             while (true) {
                 String mensaje = in.readLine();
-                mensaje=nombreCliente + ": " + mensaje;
-                String mensajeRecibido = ThreadParaCliente.recibirMensaje(mensaje,clientePublic,par.getPrivate());
-                if (mensaje == null) {
-                    break;
-                }
+
+                String mensajeRecibido = nombreCliente + ": " + ThreadParaCliente.recibirMensaje(mensaje,clientePublic,par.getPrivate());
+
 
                 if (mensaje.equalsIgnoreCase("exit")) {
                     break;
@@ -125,4 +127,22 @@ public class ThreadParaCliente extends Thread{
             }
         }
     }
+
+    public static void main(String[] args) {
+
+
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+            System.out.println("Servidor iniciado en el puerto " + PORT);
+
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("Nueva conexión entrante.");
+                ThreadParaCliente threadParaCliente = new ThreadParaCliente(clientSocket, clients);
+                clients.add(threadParaCliente);
+                threadParaCliente.start();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        }
 }

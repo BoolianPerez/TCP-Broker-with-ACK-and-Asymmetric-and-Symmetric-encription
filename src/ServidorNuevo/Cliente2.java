@@ -1,5 +1,7 @@
 package ServidorNuevo;
 
+import jdk.nashorn.internal.runtime.ECMAException;
+
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
@@ -10,7 +12,7 @@ import java.util.Scanner;
 
 public class Cliente2 {
     private static KeyPair par=FirmaDigital.generarparKeys();
-    private static PublicKey destino = ThreadParaCliente.exponerPublic();
+    private PublicKey destino;
     public static String enviarMensaje(String mensaje, PublicKey destino, PrivateKey yo)
     {
         try {
@@ -29,9 +31,24 @@ public class Cliente2 {
             throw new RuntimeException(e);
         }
     }
+    public static String[] separarString(String mensaje, char parametro){
+        String[] aux = new String[2];
+        String construir="";
+
+        for (int i=0;i<mensaje.length();i++){
+            if(mensaje.charAt(i)!=parametro){
+                construir=construir+mensaje.charAt(i);
+            } else if (mensaje.charAt(i)==parametro) {
+                aux[0]=construir;
+                construir="";
+            }
+        }
+        aux[1]=construir;
+        return aux;
+    }
     public static String recibirMensaje(String mensaje, PublicKey publico, PrivateKey privado){
         try {
-            String[] ambosMensajes=mensaje.split("|");
+            String[] ambosMensajes=separarString(mensaje,'|');
             String mensaje1=FirmaDigital.descifradoPrivate(ambosMensajes[0], privado);
             String hash=FirmaDigital.descifradoPublic(ambosMensajes[1], publico);
             String mensaje1Hasheado=FirmaDigital.hashear(mensaje1);
@@ -51,54 +68,53 @@ public class Cliente2 {
         }
         return "NO SE PUEDE CONFIRMAR EL ORIGEN DEL MENSAJERO. POR LO TANTO, NO VA A RECIBIR EL MENSAJE GRACIAs";
     }
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
+        Cliente2 cliente1=new Cliente2();
         Scanner scanner = new Scanner(System.in);
 
         System.out.print("Ingrese el puerto del servidor: ");
-        int serverPort = Integer.parseInt(scanner.nextLine());
+        int puertoServer = Integer.parseInt(scanner.nextLine());
 
         System.out.print("Ingrese su nombre: ");
-        String clientName = scanner.nextLine();
+        String nombreCliente = scanner.nextLine();
 
         System.out.print("Ingrese el tópico (TOPICA, TOPICB, TOPICC, TEATRO): ");
         String topicStr = scanner.nextLine();
 
-        System.out.println("Mensaje de Saludo");
-        String mensajeDeSaludo = scanner.nextLine();
 
         try (
-                Socket socket = new Socket("localhost", serverPort);
+                Socket socket = new Socket("localhost", puertoServer);
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
                 Scanner consoleScanner = new Scanner(System.in);
 
         ) {
-            System.out.println(in.readLine());
-
-            out.println(clientName);
-            System.out.println(in.readLine());
-
-            out.println(topicStr);
             out.println(FirmaDigital.publicaABase64(par.getPublic()));
+            cliente1.destino=FirmaDigital.base64APublica(in.readLine());
+
+            System.out.println(recibirMensaje(in.readLine(),cliente1.destino, par.getPrivate()));
+            out.println(nombreCliente);
+            System.out.println(recibirMensaje(in.readLine(),cliente1.destino, par.getPrivate()));
+            out.println(topicStr);
+
+
 
             System.out.println("Conexión establecida. Puedes empezar a chatear.");
             System.out.println("Escribe 'exit' para desconectarte.");
-
             Thread thread = new Thread(() -> {
                 try {
 
 
                     while (true) {
+
                         String message = in.readLine();
 
                         if (message != null) {
-                            String mensajeRecibido=Cliente.recibirMensaje(message,destino, par.getPrivate());
+                            String mensajeRecibido=Cliente.recibirMensaje(message,cliente1.destino, par.getPrivate());
                             if(mensajeRecibido.equals("exit")){
                                 throw new Exception("chau");
                             }
                             else{System.out.println(mensajeRecibido);}
-                        } else{
-
                         }
                     }
                 }
@@ -107,10 +123,11 @@ public class Cliente2 {
                 }
             });
             thread.start();
-            //este while ignora el mensaje exit de los otros usuarios
+
             while (true) {
-                String message = consoleScanner.nextLine();
-                String nuevoMensaje = enviarMensaje(message,destino,par.getPrivate());
+
+                String message = consoleScanner.next();
+                String nuevoMensaje = enviarMensaje(message,cliente1.destino,par.getPrivate());
                 out.println(nuevoMensaje);
                 if (message.equalsIgnoreCase("exit")) {
                     break;
@@ -122,4 +139,5 @@ public class Cliente2 {
             e.printStackTrace();
         }
     }
+
 }

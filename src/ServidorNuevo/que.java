@@ -6,9 +6,10 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Base64;
 
 public class que{
-
+    static KeyPair par=FirmaDigital.generarparKeys();
     public static void comparar(String hola, String chau){
         if(hola.equals(chau)){
             System.out.println("son iguales");
@@ -18,24 +19,15 @@ public class que{
         }
     }
     public static void main(String[] args) throws NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeyException, InvalidKeySpecException {
-        KeyPair perlo=FirmaDigital.generarparKeys();
-        String menjae="ACK";
-        System.out.println(FirmaDigital.getPublicKey(perlo).toString());
-        byte[] h=FirmaDigital.convertirKeyABytes(FirmaDigital.getPublicKey(perlo));
-        System.out.println(h);
-        String ig=FirmaDigital.encodearABase64(h);
-        System.out.println(ig);
-        byte[] ho=FirmaDigital.desencodearDeBase64(ig);
-        System.out.println(ho);
-        PublicKey key1=FirmaDigital.convertirBytesAKey(ho);
-        System.out.println(key1.toString());
-        if(FirmaDigital.getPublicKey(perlo).equals(key1)){
-            System.out.println("Hola");
-        }
-        else{
-            throw new NullPointerException();
-        }
 
+        String n="hol";
+        String h=Base64.getEncoder().encodeToString(n.getBytes());
+
+        byte[] no=Base64.getDecoder().decode(h);
+        String ho=FirmaDigital.bytesAString(no);
+        if(n.equals(ho)){
+            System.out.println("f");
+        }
 
 
     }
