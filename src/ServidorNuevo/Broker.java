@@ -3,12 +3,17 @@ package ServidorNuevo;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.KeyPair;
+import java.security.PublicKey;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+
 
 public class Broker {
+
     private static final int PORT = 12345;
-    private static List<ThreadCliente> clients = new ArrayList<>();
+    private static ArrayList<ThreadParaCliente> clients = new ArrayList<>();
+
 
     public static void main(String[] args) {
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
@@ -17,10 +22,9 @@ public class Broker {
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("Nueva conexión entrante.");
-
-                ThreadCliente ThreadCliente = new ThreadCliente(clientSocket, clients);
-                clients.add(ThreadCliente);
-                ThreadCliente.start();
+                ThreadParaCliente threadParaCliente = new ThreadParaCliente(clientSocket, clients);
+                clients.add(threadParaCliente);
+                threadParaCliente.start();
             }
         } catch (IOException e) {
             e.printStackTrace();
