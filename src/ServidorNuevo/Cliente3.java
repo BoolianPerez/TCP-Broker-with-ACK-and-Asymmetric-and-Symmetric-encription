@@ -3,6 +3,7 @@ package ServidorNuevo;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -14,6 +15,7 @@ import java.util.Scanner;
 public class Cliente3 {
     private static final KeyPair par=FirmaDigital.generarparKeys();
     private PublicKey destino;
+    private SecretKey ClaveSimetrica;
     public PublicKey getDestino() {
         return destino;
     }

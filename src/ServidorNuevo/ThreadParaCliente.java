@@ -3,6 +3,7 @@ package ServidorNuevo;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -16,6 +17,16 @@ import java.util.ArrayList;
 public class ThreadParaCliente extends Thread{
     private Socket clienteSocket;
     private static final int PORT = 12345;
+    private static SecretKey claveSimetrica;
+
+    static {
+        try {
+            claveSimetrica = FirmaDigital.generarSecreta();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private static ArrayList<ThreadParaCliente> clients = new ArrayList<>();
     private static final KeyPair par=FirmaDigital.generarparKeys();
     private Topicos topico;
@@ -30,6 +41,30 @@ public class ThreadParaCliente extends Thread{
         this.clientes = clientes;
         in = new BufferedReader(new InputStreamReader(clienteSocket.getInputStream()));
         out = new PrintWriter(clienteSocket.getOutputStream(), true);
+    }
+    public static String enviarMensajeSimetrico(String mensaje, SecretKey clave, PrivateKey yo){
+        try {
+            String laMensajeada=FirmaDigital.cifrarSimetrica(mensaje, clave);
+            return laMensajeada +"¬"+ FirmaDigital.encriptarYHashear(mensaje,yo);
+        } catch (NoSuchPaddingException | NoSuchAlgorithmException | IllegalBlockSizeException | BadPaddingException |
+                 InvalidKeyException | InvalidAlgorithmParameterException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    public static String recibirMensajeSimetrico(String mensaje, PublicKey publico, SecretKey clave){
+        try {
+            String[] ambosMensajes=mensaje.split("¬");
+            String mensaje1=FirmaDigital.descifrarSimetrica(ambosMensajes[0], clave);
+            String hash=FirmaDigital.descifradoPublic(ambosMensajes[1], publico);
+            String mensaje1Hasheado=FirmaDigital.hashear(mensaje1);
+            if(hash.equals(mensaje1Hasheado)){
+                return mensaje1;
+            }
+        } catch (NoSuchPaddingException | IllegalBlockSizeException | NoSuchAlgorithmException | InvalidKeyException |
+                 BadPaddingException | InvalidAlgorithmParameterException e) {
+            throw new RuntimeException(e);
+        }
+        return "NO SE PUEDE CONFIRMAR EL ORIGEN DEL MENSAJERO. POR LO TANTO, NO VA A RECIBIR EL MENSAJE GRACIAs";
     }
 
     public static String enviarMensaje(String mensaje, PublicKey destino, PrivateKey yo)
@@ -62,16 +97,17 @@ public class ThreadParaCliente extends Thread{
         try {
             clientePublic=FirmaDigital.base64APublica(in.readLine());
             out.println(FirmaDigital.publicaABase64(par.getPublic()));
+            out.println(enviarMensaje(FirmaDigital.secretaABase64(claveSimetrica),clientePublic, par.getPrivate()));
             String j="Bienvenido al servidor de chat. Por favor, elige un nombre:";
-            out.println(enviarMensaje(j,clientePublic, par.getPrivate()));
+            out.println(enviarMensajeSimetrico(j,claveSimetrica, par.getPrivate()));
             nombreCliente = in.readLine();
             String g="Elige un tópico (TOPICA, TOPICB, TOPICC, TEATRO):";
-            out.println(enviarMensaje(g,clientePublic, par.getPrivate()));
+            out.println(enviarMensajeSimetrico(g,claveSimetrica, par.getPrivate()));
             String topicoStr = in.readLine();
             topico = Topicos.valueOf(topicoStr);
 
             String h="Conexión establecida. Puedes empezar a chatear.";
-            out.println(enviarMensaje(h,clientePublic,par.getPrivate()));
+            out.println(enviarMensajeSimetrico(h,claveSimetrica,par.getPrivate()));
 
 
             for (ThreadParaCliente cliente : clientes) {

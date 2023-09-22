@@ -1,9 +1,9 @@
 package ServidorNuevo;
 
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
+import javax.crypto.*;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -13,12 +13,13 @@ import java.nio.file.Files;
 import java.security.*;
 import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
+import java.security.spec.KeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
 public class FirmaDigital {
     private static KeyPair par;
-
+    private static IvParameterSpec iv=generateIv();
     public FirmaDigital(){
         par=generarparKeys();
     }
@@ -32,6 +33,35 @@ public class FirmaDigital {
         generator.initialize(2048);
         KeyPair pair = generator.generateKeyPair();
         return pair;
+    }
+    public static SecretKey generarSecreta() throws NoSuchAlgorithmException {
+        KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
+        keyGenerator.init(256);
+        SecretKey key = keyGenerator.generateKey();
+        return key;
+    }
+    public static IvParameterSpec generateIv() {
+        byte[] iv = new byte[16];
+        new SecureRandom().nextBytes(iv);
+        return new IvParameterSpec(iv);
+    }
+
+    public static String cifrarSimetrica(String mensaje, SecretKey key) throws NoSuchPaddingException, NoSuchAlgorithmException,
+            InvalidAlgorithmParameterException, InvalidKeyException,
+            BadPaddingException, IllegalBlockSizeException {
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.ENCRYPT_MODE, key, iv);
+        byte[] cipherText = cipher.doFinal(mensaje.getBytes());
+        return Base64.getEncoder().encodeToString(cipherText);
+    }
+    public static String descifrarSimetrica(String cifrado, SecretKey key) throws NoSuchPaddingException, NoSuchAlgorithmException,
+            InvalidAlgorithmParameterException, InvalidKeyException,
+            BadPaddingException, IllegalBlockSizeException {
+
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.DECRYPT_MODE, key, iv);
+        byte[] plainText = cipher.doFinal(Base64.getDecoder().decode(cifrado));
+        return new String(plainText);
     }
     public static String cifradoPublic(String mensaje, PublicKey publico) throws NoSuchPaddingException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
         Cipher encryptCipher = Cipher.getInstance("RSA");
@@ -87,11 +117,12 @@ public class FirmaDigital {
         return hexString.toString();
     }
 
-
-
-    public static String bytesAString(byte[] bytes){
-        String mensaje= new String(bytes, StandardCharsets.UTF_8);
-        return mensaje;
+    public static String secretaABase64(SecretKey key){
+        return Base64.getEncoder().encodeToString(key.getEncoded());
+    }
+    public static SecretKey base64ASecreta(String secreta64){
+        byte[] decodedKey = Base64.getDecoder().decode(secreta64);
+        return new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES");
     }
     public static String hashear(String mensaje){
         final MessageDigest digest;

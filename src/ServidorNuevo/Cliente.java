@@ -3,6 +3,7 @@ package ServidorNuevo;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
 import java.io.*;
 import java.net.Socket;
 import java.security.*;
@@ -11,8 +12,33 @@ import java.util.Scanner;
 public class Cliente {
     private static final KeyPair par=FirmaDigital.generarparKeys();
     private PublicKey destino;
+    private SecretKey claveSimetrica;
     public PublicKey getDestino() {
         return destino;
+    }
+    public static String enviarMensajeSimetrico(String mensaje, SecretKey clave, PrivateKey yo){
+        try {
+            String laMensajeada=FirmaDigital.cifrarSimetrica(mensaje, clave);
+            return laMensajeada +"¬"+ FirmaDigital.encriptarYHashear(mensaje,yo);
+        } catch (NoSuchPaddingException | NoSuchAlgorithmException | IllegalBlockSizeException | BadPaddingException |
+                 InvalidKeyException | InvalidAlgorithmParameterException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    public static String recibirMensajeSimetrico(String mensaje, PublicKey publico, SecretKey clave){
+        try {
+            String[] ambosMensajes=mensaje.split("¬");
+            String mensaje1=FirmaDigital.descifrarSimetrica(ambosMensajes[0], clave);
+            String hash=FirmaDigital.descifradoPublic(ambosMensajes[1], publico);
+            String mensaje1Hasheado=FirmaDigital.hashear(mensaje1);
+            if(hash.equals(mensaje1Hasheado)){
+                return mensaje1;
+            }
+        } catch (NoSuchPaddingException | IllegalBlockSizeException | NoSuchAlgorithmException | InvalidKeyException |
+                 BadPaddingException | InvalidAlgorithmParameterException e) {
+            throw new RuntimeException(e);
+        }
+        return "NO SE PUEDE CONFIRMAR EL ORIGEN DEL MENSAJERO. POR LO TANTO, NO VA A RECIBIR EL MENSAJE GRACIAs";
     }
     public static String enviarMensaje(String mensaje, PublicKey destino, PrivateKey yo)
     {
@@ -63,9 +89,11 @@ public class Cliente {
         ) {
             out.println(FirmaDigital.publicaABase64(par.getPublic()));
             cliente1.destino=FirmaDigital.base64APublica(in.readLine());
-            System.out.println(recibirMensaje(in.readLine(),cliente1.destino, par.getPrivate()));
+            String secreta=recibirMensaje(in.readLine(), cliente1.destino, par.getPrivate());
+            cliente1.claveSimetrica=FirmaDigital.base64ASecreta(secreta);
+            System.out.println(recibirMensajeSimetrico(in.readLine(),cliente1.destino, cliente1.claveSimetrica));
             out.println(nombreCliente);
-            System.out.println(recibirMensaje(in.readLine(),cliente1.destino, par.getPrivate()));
+            System.out.println(recibirMensajeSimetrico(in.readLine(),cliente1.destino, cliente1.claveSimetrica));
             out.println(topicStr);
 
 

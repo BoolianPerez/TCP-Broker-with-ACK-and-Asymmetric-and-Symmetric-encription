@@ -3,6 +3,7 @@ package ServidorNuevo;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -14,8 +15,33 @@ import java.util.Scanner;
 public class Cliente2 {
     private static final KeyPair par=FirmaDigital.generarparKeys();
     private PublicKey destino;
+    private SecretKey claveSimetrica;
     public PublicKey getDestino() {
         return destino;
+    }
+    public static String enviarMensajeSimetrico(String mensaje, SecretKey clave, PrivateKey yo){
+        try {
+            String laMensajeada=FirmaDigital.cifrarSimetrica(mensaje, clave);
+            return laMensajeada +"¬"+ FirmaDigital.encriptarYHashear(mensaje,yo);
+        } catch (NoSuchPaddingException | NoSuchAlgorithmException | IllegalBlockSizeException | BadPaddingException |
+                 InvalidKeyException | InvalidAlgorithmParameterException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    public static String recibirMensaje(String mensaje, PublicKey publico, SecretKey clave){
+        try {
+            String[] ambosMensajes=mensaje.split("¬");
+            String mensaje1=FirmaDigital.descifrarSimetrica(ambosMensajes[0], clave);
+            String hash=FirmaDigital.descifradoPublic(ambosMensajes[1], publico);
+            String mensaje1Hasheado=FirmaDigital.hashear(mensaje1);
+            if(hash.equals(mensaje1Hasheado)){
+                return mensaje1;
+            }
+        } catch (NoSuchPaddingException | IllegalBlockSizeException | NoSuchAlgorithmException | InvalidKeyException |
+                 BadPaddingException | InvalidAlgorithmParameterException e) {
+            throw new RuntimeException(e);
+        }
+        return "NO SE PUEDE CONFIRMAR EL ORIGEN DEL MENSAJERO. POR LO TANTO, NO VA A RECIBIR EL MENSAJE GRACIAs";
     }
     public static String enviarMensaje(String mensaje, PublicKey destino, PrivateKey yo)
     {
