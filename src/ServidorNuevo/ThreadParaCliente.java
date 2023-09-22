@@ -3,20 +3,21 @@ package ServidorNuevo;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.*;
-import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
-import java.util.HashMap;
 
 
 public class ThreadParaCliente extends Thread{
     private Socket clienteSocket;
     private static final int PORT = 12345;
     private static ArrayList<ThreadParaCliente> clients = new ArrayList<>();
-    private static KeyPair par=FirmaDigital.generarparKeys();
+    private static final KeyPair par=FirmaDigital.generarparKeys();
     private Topicos topico;
     private String nombreCliente;
     private BufferedReader in;
@@ -35,38 +36,23 @@ public class ThreadParaCliente extends Thread{
     {
         try {
             String laMensajeada=FirmaDigital.cifradoPublic(mensaje, destino);
-            String superMensaje = laMensajeada +"|"+ FirmaDigital.encriptarYHashear(mensaje,yo);
-            return superMensaje;
-        } catch (NoSuchPaddingException e) {
-            throw new RuntimeException(e);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        } catch (IllegalBlockSizeException e) {
-            throw new RuntimeException(e);
-        } catch (BadPaddingException e) {
-            throw new RuntimeException(e);
-        } catch (InvalidKeyException e) {
+            return laMensajeada +"¬"+ FirmaDigital.encriptarYHashear(mensaje,yo);
+        } catch (NoSuchPaddingException | NoSuchAlgorithmException | IllegalBlockSizeException | BadPaddingException |
+                 InvalidKeyException e) {
             throw new RuntimeException(e);
         }
     }
     public static String recibirMensaje(String mensaje, PublicKey publico, PrivateKey privado){
         try {
-            String[] ambosMensajes=mensaje.split("|");
+            String[] ambosMensajes=mensaje.split("¬");
             String mensaje1=FirmaDigital.descifradoPrivate(ambosMensajes[0], privado);
             String hash=FirmaDigital.descifradoPublic(ambosMensajes[1], publico);
             String mensaje1Hasheado=FirmaDigital.hashear(mensaje1);
             if(hash.equals(mensaje1Hasheado)){
                 return mensaje1;
             }
-        } catch (NoSuchPaddingException e) {
-            throw new RuntimeException(e);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        } catch (InvalidKeyException e) {
-            throw new RuntimeException(e);
-        } catch (IllegalBlockSizeException e) {
-            throw new RuntimeException(e);
-        } catch (BadPaddingException e) {
+        } catch (NoSuchPaddingException | IllegalBlockSizeException | NoSuchAlgorithmException | InvalidKeyException |
+                 BadPaddingException e) {
             throw new RuntimeException(e);
         }
         return "NO SE PUEDE CONFIRMAR EL ORIGEN DEL MENSAJERO. POR LO TANTO, NO VA A RECIBIR EL MENSAJE GRACIAs";
@@ -90,7 +76,9 @@ public class ThreadParaCliente extends Thread{
 
             for (ThreadParaCliente cliente : clientes) {
                 if (cliente != this && cliente.topico == topico) {
-                        out.println(cliente.nombreCliente + " está en línea.");
+                    String enLinea=cliente.nombreCliente + " está en línea.";
+                    String mensajeEncriptar= ThreadParaCliente.enviarMensaje(enLinea,cliente.clientePublic, par.getPrivate());
+                    cliente.out.println(mensajeEncriptar);
                 }
             }
 
@@ -113,7 +101,7 @@ public class ThreadParaCliente extends Thread{
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println("se fue");
         } finally {
             try {
                 in.close();

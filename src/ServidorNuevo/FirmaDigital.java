@@ -33,70 +33,6 @@ public class FirmaDigital {
         KeyPair pair = generator.generateKeyPair();
         return pair;
     }
-
-    public static PrivateKey getPrivateKey(KeyPair pair){
-        return pair.getPrivate();
-    }
-    public static PublicKey getPublicKey(KeyPair pair){
-        return pair.getPublic();
-    }
-    public static void guardarPublicKeyEnArchivo(){
-        try (FileOutputStream fos = new FileOutputStream("public.key")) {
-            fos.write(getPublicKey(par).getEncoded());
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-    public static void guardarPrivateKeyEnArchivo(){
-        try (FileOutputStream fos = new FileOutputStream("private.key")) {
-            fos.write(getPrivateKey(par).getEncoded());
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-    public static byte[] leerArchivoPublico() {
-        File publicKeyFile = new File("public.key");
-        try {
-            byte[] publicKeyBytes = Files.readAllBytes(publicKeyFile.toPath());
-            return publicKeyBytes;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-    public static byte[] leerArchivoPrivado(){
-
-        File privateKeyFile = new File("private.key");
-        try {
-            byte[] privateKeyBytes = Files.readAllBytes(privateKeyFile.toPath());
-            return privateKeyBytes;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static PublicKey guardarPublicaEnKeyFactory() throws NoSuchAlgorithmException {
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(leerArchivoPublico());
-        try {
-            return keyFactory.generatePublic(publicKeySpec);
-        } catch (InvalidKeySpecException e) {
-            throw new RuntimeException(e);
-        }
-    }
-    public static PrivateKey guardarPrivadaEnKeyFactory() throws NoSuchAlgorithmException {
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        EncodedKeySpec privateKeySpec = new X509EncodedKeySpec(leerArchivoPrivado());
-        try {
-            return keyFactory.generatePrivate(privateKeySpec);
-        } catch (InvalidKeySpecException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     public static String cifradoPublic(String mensaje, PublicKey publico) throws NoSuchPaddingException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
         Cipher encryptCipher = Cipher.getInstance("RSA");
         encryptCipher.init(Cipher.ENCRYPT_MODE, publico);
@@ -130,10 +66,7 @@ public class FirmaDigital {
         String encodedMessage = Base64.getEncoder().encodeToString(mensaje);
         return encodedMessage;
     }
-    public static byte[] desencodearDeBase64(String mensaje){
-        byte[] bytesDecodificados = Base64.getDecoder().decode(mensaje);
-        return bytesDecodificados;
-    }
+
 
     public static String encriptarYHashear(String mensaje, PrivateKey privado) throws NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
         final MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -154,18 +87,7 @@ public class FirmaDigital {
         return hexString.toString();
     }
 
-    public static byte[] convertirKeyABytes(PublicKey ke)
-    {
-        byte[] como=ke.getEncoded();
-        return como;
-    }
-    public static PublicKey convertirBytesAKey(byte[] boite) throws NoSuchAlgorithmException, InvalidKeySpecException {
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(boite);
-        PublicKey publicKey2 = keyFactory.generatePublic(publicKeySpec);
-        return publicKey2;
 
-    }
 
     public static String bytesAString(byte[] bytes){
         String mensaje= new String(bytes, StandardCharsets.UTF_8);
