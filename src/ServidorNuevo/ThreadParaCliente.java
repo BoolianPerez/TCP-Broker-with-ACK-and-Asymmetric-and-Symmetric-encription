@@ -110,6 +110,7 @@ public class ThreadParaCliente extends Thread{
             out.println(enviarMensajeSimetrico(h,claveSimetrica,par.getPrivate()));
 
 
+
             for (ThreadParaCliente cliente : clientes) {
                 if (cliente != this && cliente.topico == topico) {
                     String enLinea=cliente.nombreCliente + " está en línea.";

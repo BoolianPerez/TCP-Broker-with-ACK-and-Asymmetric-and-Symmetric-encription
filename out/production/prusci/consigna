@@ -1,6 +1,0 @@
-Broker TCP CON ACK:
- Servidor donde múltiples clientes se conecten, se subscriban a tópicos y al enviar mensajes
- a cada tópico el servidor los distribuya entre los clientes subscriptos con confirmación de entrega
- mediante ACK (TCP).
-
-

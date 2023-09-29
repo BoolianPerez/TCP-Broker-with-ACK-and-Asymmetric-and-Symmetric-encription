@@ -13,11 +13,10 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
 public class FirmaDigital {
-    private static KeyPair par;
+
     private static String delim="DELIMITADOR";
-    private static IvParameterSpec iv=generateIv();
+
     public FirmaDigital(){
-        par=generarparKeys();
     }
     public static KeyPair generarparKeys(){
         KeyPairGenerator generator;
@@ -29,17 +28,6 @@ public class FirmaDigital {
         generator.initialize(2048);
         KeyPair pair = generator.generateKeyPair();
         return pair;
-    }
-    public static SecretKey generarSecreta() throws NoSuchAlgorithmException {
-        KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
-        keyGenerator.init(256);
-        SecretKey key = keyGenerator.generateKey();
-        return key;
-    }
-    public static IvParameterSpec generateIv() {
-        byte[] iv = new byte[16];
-        new SecureRandom().nextBytes(iv);
-        return new IvParameterSpec(iv);
     }
 
     public static String cifrarSimetrica(String mensaje, SecretKey key) throws NoSuchPaddingException, NoSuchAlgorithmException,
@@ -112,13 +100,7 @@ public class FirmaDigital {
         return hexString.toString();
     }
 
-    public static String secretaABase64(SecretKey key){
-        return Base64.getEncoder().encodeToString(key.getEncoded());
-    }
-    public static SecretKey base64ASecreta(String secreta64){
-        byte[] decodedKey = Base64.getDecoder().decode(secreta64);
-        return new SecretKeySpec(decodedKey, 0, decodedKey.length, "AES");
-    }
+
     public static String hashear(String mensaje){
         final MessageDigest digest;
         try {
