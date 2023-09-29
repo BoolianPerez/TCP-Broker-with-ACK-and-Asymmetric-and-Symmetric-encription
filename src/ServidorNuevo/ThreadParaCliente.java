@@ -4,6 +4,7 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -11,18 +12,21 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.*;
+import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 
 
 public class ThreadParaCliente extends Thread{
     private Socket clienteSocket;
     private static final int PORT = 12345;
+    private static String pass = "Ao3T4h4GGvs4Q28Q";
+    private static String salt = "aCo3355";
     private static SecretKey claveSimetrica;
 
     static {
         try {
-            claveSimetrica = FirmaDigital.generarSecreta();
-        } catch (NoSuchAlgorithmException e) {
+            claveSimetrica = FirmaDigital.getKeyFromPassword(pass,salt);
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             throw new RuntimeException(e);
         }
     }
@@ -97,15 +101,11 @@ public class ThreadParaCliente extends Thread{
         try {
             clientePublic=FirmaDigital.base64APublica(in.readLine());
             out.println(FirmaDigital.publicaABase64(par.getPublic()));
-            out.println(enviarMensaje(FirmaDigital.secretaABase64(claveSimetrica),clientePublic, par.getPrivate()));
-            String j="Bienvenido al servidor de chat. Por favor, elige un nombre:";
-            out.println(enviarMensajeSimetrico(j,claveSimetrica, par.getPrivate()));
+            out.println(enviarMensaje(pass,clientePublic, par.getPrivate()));
+            out.println(enviarMensaje(salt,clientePublic, par.getPrivate()));
             nombreCliente = in.readLine();
-            String g="Elige un tópico (TOPICA, TOPICB, TOPICC, TEATRO):";
-            out.println(enviarMensajeSimetrico(g,claveSimetrica, par.getPrivate()));
             String topicoStr = in.readLine();
             topico = Topicos.valueOf(topicoStr);
-
             String h="Conexión establecida. Puedes empezar a chatear.";
             out.println(enviarMensajeSimetrico(h,claveSimetrica,par.getPrivate()));
 
@@ -113,7 +113,7 @@ public class ThreadParaCliente extends Thread{
             for (ThreadParaCliente cliente : clientes) {
                 if (cliente != this && cliente.topico == topico) {
                     String enLinea=cliente.nombreCliente + " está en línea.";
-                    String mensajeEncriptar= ThreadParaCliente.enviarMensaje(enLinea,cliente.clientePublic, par.getPrivate());
+                    String mensajeEncriptar= ThreadParaCliente.enviarMensajeSimetrico(enLinea,claveSimetrica, par.getPrivate());
                     cliente.out.println(mensajeEncriptar);
                 }
             }
@@ -122,7 +122,7 @@ public class ThreadParaCliente extends Thread{
             while (true) {
                 String mensaje = in.readLine();
 
-                String mensajeRecibido = nombreCliente + ": " + ThreadParaCliente.recibirMensaje(mensaje,clientePublic,par.getPrivate());
+                String mensajeRecibido = nombreCliente + ": " + ThreadParaCliente.recibirMensajeSimetrico(mensaje,clientePublic,claveSimetrica);
 
 
                 if (mensaje.equalsIgnoreCase("exit")) {
@@ -131,7 +131,7 @@ public class ThreadParaCliente extends Thread{
 
                 for (ThreadParaCliente cliente : clientes) {
                     if (cliente != this && cliente.topico == topico) {
-                        String mensajeEncriptar= ThreadParaCliente.enviarMensaje(mensajeRecibido,cliente.clientePublic, par.getPrivate());
+                        String mensajeEncriptar= ThreadParaCliente.enviarMensajeSimetrico(mensajeRecibido, claveSimetrica, par.getPrivate());
                             cliente.out.println(mensajeEncriptar);
                     }
                 }

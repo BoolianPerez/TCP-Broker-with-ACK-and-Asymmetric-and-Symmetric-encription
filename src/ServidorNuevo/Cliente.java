@@ -7,6 +7,7 @@ import javax.crypto.SecretKey;
 import java.io.*;
 import java.net.Socket;
 import java.security.*;
+import java.security.spec.InvalidKeySpecException;
 import java.util.Scanner;
 
 public class Cliente {
@@ -89,16 +90,11 @@ public class Cliente {
         ) {
             out.println(FirmaDigital.publicaABase64(par.getPublic()));
             cliente1.destino=FirmaDigital.base64APublica(in.readLine());
-            String secreta=recibirMensaje(in.readLine(), cliente1.destino, par.getPrivate());
-            cliente1.claveSimetrica=FirmaDigital.base64ASecreta(secreta);
-            System.out.println(recibirMensajeSimetrico(in.readLine(),cliente1.destino, cliente1.claveSimetrica));
+            String pass=recibirMensaje(in.readLine(), cliente1.destino, par.getPrivate());
+            String salt=recibirMensaje(in.readLine(), cliente1.destino, par.getPrivate());
+            cliente1.claveSimetrica=FirmaDigital.getKeyFromPassword(pass,salt);
             out.println(nombreCliente);
-            System.out.println(recibirMensajeSimetrico(in.readLine(),cliente1.destino, cliente1.claveSimetrica));
             out.println(topicStr);
-
-
-
-            System.out.println("Conexión establecida. Puedes empezar a chatear.");
             System.out.println("Escribe 'exit' para desconectarte.");
             Thread thread = new Thread(() -> {
                 try {
@@ -109,7 +105,7 @@ public class Cliente {
                         String message = in.readLine();
 
                         if (message != null) {
-                            String mensajeRecibido=Cliente.recibirMensaje(message,cliente1.getDestino(), par.getPrivate());
+                            String mensajeRecibido=Cliente.recibirMensajeSimetrico(message,cliente1.getDestino(), cliente1.claveSimetrica);
                             if(mensajeRecibido.equals("exit")){
                                 throw new Exception("chau");
                             }
@@ -125,7 +121,7 @@ public class Cliente {
 
             while (true) {
                 String message = consoleScanner.next();
-                String nuevoMensaje = enviarMensaje(message,cliente1.getDestino(),par.getPrivate());
+                String nuevoMensaje = enviarMensajeSimetrico(message, cliente1.claveSimetrica, par.getPrivate());
                 out.println(nuevoMensaje);
                 if (message.equalsIgnoreCase("exit")) {
                     return;
@@ -135,6 +131,10 @@ public class Cliente {
 
          } catch (IOException e) {
             e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        } catch (InvalidKeySpecException e) {
+            throw new RuntimeException(e);
         }
     }
 

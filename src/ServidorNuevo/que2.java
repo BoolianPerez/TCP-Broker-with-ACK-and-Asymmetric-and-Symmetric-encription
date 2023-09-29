@@ -4,7 +4,11 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
+import java.io.UnsupportedEncodingException;
 import java.security.*;
+import java.security.spec.InvalidKeySpecException;
+import java.util.Base64;
 
 public class que2 {
     static KeyPair par= FirmaDigital.generarparKeys();
@@ -32,15 +36,6 @@ public class que2 {
         }
         return "NO SE PUEDE CONFIRMAR EL ORIGEN DEL MENSAJERO. POR LO TANTO, NO VA A RECIBIR EL MENSAJE GRACIAs";
     }
-    public static void main(String[] args) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
-        PublicKey publi=par.getPublic();
-        PrivateKey priv=par.getPrivate();
-        SecretKey og= FirmaDigital.generarSecreta();
-        String mensaje="oi";
-        String secretaen64 = FirmaDigital.secretaABase64(og);
-        SecretKey a= FirmaDigital.base64ASecreta(secretaen64);
-        String encript=enviarMensajeSimetrico(mensaje,og,priv);
-        System.out.println(recibirMensajeSimetrico(encript,publi,og));
-
+    public static void main(String[] args) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException, InvalidKeyException, UnsupportedEncodingException {
     }
 }

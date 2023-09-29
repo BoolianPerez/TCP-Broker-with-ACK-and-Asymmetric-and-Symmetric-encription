@@ -1,17 +1,12 @@
 package ServidorNuevo;
 
 import javax.crypto.*;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.security.*;
-import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.security.spec.X509EncodedKeySpec;
@@ -19,6 +14,7 @@ import java.util.Base64;
 
 public class FirmaDigital {
     private static KeyPair par;
+    private static String delim="DELIMITADOR";
     private static IvParameterSpec iv=generateIv();
     public FirmaDigital(){
         par=generarparKeys();
@@ -49,19 +45,18 @@ public class FirmaDigital {
     public static String cifrarSimetrica(String mensaje, SecretKey key) throws NoSuchPaddingException, NoSuchAlgorithmException,
             InvalidAlgorithmParameterException, InvalidKeyException,
             BadPaddingException, IllegalBlockSizeException {
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.ENCRYPT_MODE, key, iv);
-        byte[] cipherText = cipher.doFinal(mensaje.getBytes());
-        return Base64.getEncoder().encodeToString(cipherText);
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE, key);
+        return Base64.getEncoder().encodeToString(cipher.doFinal(mensaje.getBytes()))+delim+Base64.getEncoder().encodeToString(cipher.getIV());
     }
     public static String descifrarSimetrica(String cifrado, SecretKey key) throws NoSuchPaddingException, NoSuchAlgorithmException,
             InvalidAlgorithmParameterException, InvalidKeyException,
             BadPaddingException, IllegalBlockSizeException {
-
-        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-        cipher.init(Cipher.DECRYPT_MODE, key, iv);
-        byte[] plainText = cipher.doFinal(Base64.getDecoder().decode(cifrado));
-        return new String(plainText);
+        String[] cosas=cifrado.split(delim);
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.DECRYPT_MODE, key , new GCMParameterSpec(128, Base64.getDecoder().decode(cosas[1])));
+        cipher.doFinal(Base64.getDecoder().decode(cosas[0]));
+        return new String(cipher.doFinal(Base64.getDecoder().decode(cosas[0])));
     }
     public static String cifradoPublic(String mensaje, PublicKey publico) throws NoSuchPaddingException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
         Cipher encryptCipher = Cipher.getInstance("RSA");
@@ -151,4 +146,13 @@ public class FirmaDigital {
         return Base64.getEncoder().encodeToString(publica.getEncoded());
     }
 
+    public static SecretKey getKeyFromPassword(String password, String salt)
+            throws NoSuchAlgorithmException, InvalidKeySpecException {
+
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        KeySpec spec = new PBEKeySpec(password.toCharArray(), salt.getBytes(), 65536, 256);
+        SecretKey secret = new SecretKeySpec(factory.generateSecret(spec)
+                .getEncoded(), "AES");
+        return secret;
+    }
 }
