@@ -133,7 +133,12 @@ public class ThreadParaCliente extends Thread{
                     if (cliente != this && cliente.topico == topico) {
                         String mensajeEncriptar= ThreadParaCliente.enviarMensajeSimetrico(mensajeRecibido, claveSimetrica, par.getPrivate());
                             cliente.out.println(mensajeEncriptar);
+                    } else if (cliente==this) {
+                        String ack="ACK";
+                        String mensajeEncriptar= ThreadParaCliente.enviarMensajeSimetrico(ack, claveSimetrica, par.getPrivate());
+                        cliente.out.println(mensajeEncriptar);
                     }
+
                 }
             }
         } catch (Exception e) {

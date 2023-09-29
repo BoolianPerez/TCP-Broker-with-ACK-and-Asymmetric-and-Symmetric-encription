@@ -10,14 +10,39 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.security.*;
+import java.security.spec.InvalidKeySpecException;
 import java.util.Scanner;
 
 public class Cliente3 {
     private static final KeyPair par=FirmaDigital.generarparKeys();
     private PublicKey destino;
-    private SecretKey ClaveSimetrica;
+    private SecretKey claveSimetrica;
     public PublicKey getDestino() {
         return destino;
+    }
+    public static String enviarMensajeSimetrico(String mensaje, SecretKey clave, PrivateKey yo){
+        try {
+            String laMensajeada=FirmaDigital.cifrarSimetrica(mensaje, clave);
+            return laMensajeada +"¬"+ FirmaDigital.encriptarYHashear(mensaje,yo);
+        } catch (NoSuchPaddingException | NoSuchAlgorithmException | IllegalBlockSizeException | BadPaddingException |
+                 InvalidKeyException | InvalidAlgorithmParameterException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    public static String recibirMensajeSimetrico(String mensaje, PublicKey publico, SecretKey clave){
+        try {
+            String[] ambosMensajes=mensaje.split("¬");
+            String mensaje1=FirmaDigital.descifrarSimetrica(ambosMensajes[0], clave);
+            String hash=FirmaDigital.descifradoPublic(ambosMensajes[1], publico);
+            String mensaje1Hasheado=FirmaDigital.hashear(mensaje1);
+            if(hash.equals(mensaje1Hasheado)){
+                return mensaje1;
+            }
+        } catch (NoSuchPaddingException | IllegalBlockSizeException | NoSuchAlgorithmException | InvalidKeyException |
+                 BadPaddingException | InvalidAlgorithmParameterException e) {
+            throw new RuntimeException(e);
+        }
+        return "NO SE PUEDE CONFIRMAR EL ORIGEN DEL MENSAJERO. POR LO TANTO, NO VA A RECIBIR EL MENSAJE GRACIAs";
     }
     public static String enviarMensaje(String mensaje, PublicKey destino, PrivateKey yo)
     {
@@ -39,7 +64,7 @@ public class Cliente3 {
             if(hash.equals(mensaje1Hasheado)){
                 return mensaje1;
             }
-        } catch (NoSuchPaddingException | NoSuchAlgorithmException | InvalidKeyException | IllegalBlockSizeException |
+        } catch (NoSuchPaddingException | IllegalBlockSizeException | NoSuchAlgorithmException | InvalidKeyException |
                  BadPaddingException e) {
             throw new RuntimeException(e);
         }
@@ -68,15 +93,11 @@ public class Cliente3 {
         ) {
             out.println(FirmaDigital.publicaABase64(par.getPublic()));
             cliente1.destino=FirmaDigital.base64APublica(in.readLine());
-
-            System.out.println(recibirMensaje(in.readLine(),cliente1.destino, par.getPrivate()));
+            String pass=recibirMensaje(in.readLine(), cliente1.destino, par.getPrivate());
+            String salt=recibirMensaje(in.readLine(), cliente1.destino, par.getPrivate());
+            cliente1.claveSimetrica=FirmaDigital.getKeyFromPassword(pass,salt);
             out.println(nombreCliente);
-            System.out.println(recibirMensaje(in.readLine(),cliente1.destino, par.getPrivate()));
             out.println(topicStr);
-
-
-
-            System.out.println("Conexión establecida. Puedes empezar a chatear.");
             System.out.println("Escribe 'exit' para desconectarte.");
             Thread thread = new Thread(() -> {
                 try {
@@ -87,31 +108,23 @@ public class Cliente3 {
                         String message = in.readLine();
 
                         if (message != null) {
-                            String mensajeRecibido=Cliente2.recibirMensaje(message,cliente1.getDestino(), par.getPrivate());
+                            String mensajeRecibido=Cliente.recibirMensajeSimetrico(message,cliente1.getDestino(), cliente1.claveSimetrica);
                             if(mensajeRecibido.equals("exit")){
-                                throw new Exception("me pediste salir");
+                                throw new Exception("chau");
                             }
                             else{System.out.println(mensajeRecibido);}
-                        }else{
-                            break;
                         }
                     }
-                }catch (NullPointerException e)
-                {
-                    System.err.println(e.getMessage());
-                    System.out.println("a partir de este momento sos sordo oeee");
                 }
                 catch(Exception e){
                     System.out.println("Saliendo");
-                    e.printStackTrace();
                 }
             });
             thread.start();
 
             while (true) {
-
                 String message = consoleScanner.next();
-                String nuevoMensaje = enviarMensaje(message,cliente1.getDestino(),par.getPrivate());
+                String nuevoMensaje = enviarMensajeSimetrico(message, cliente1.claveSimetrica, par.getPrivate());
                 out.println(nuevoMensaje);
                 if (message.equalsIgnoreCase("exit")) {
                     return;
@@ -121,6 +134,10 @@ public class Cliente3 {
 
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        } catch (InvalidKeySpecException e) {
+            throw new RuntimeException(e);
         }
     }
 
