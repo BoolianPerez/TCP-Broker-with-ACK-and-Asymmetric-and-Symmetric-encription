@@ -4,7 +4,6 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.IvParameterSpec;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -16,7 +15,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 
 
-public class ThreadParaCliente extends Thread{
+public class Servidor extends Thread{
     private Socket clienteSocket;
     private static final int PORT = 12345;
     private static String pass = "Ao3T4h4GGvs4Q28Q";
@@ -31,16 +30,16 @@ public class ThreadParaCliente extends Thread{
         }
     }
 
-    private static ArrayList<ThreadParaCliente> clients = new ArrayList<>();
+    private static ArrayList<Servidor> clients = new ArrayList<>();
     private static final KeyPair par=FirmaDigital.generarparKeys();
     private Topicos topico;
     private String nombreCliente;
     private BufferedReader in;
     private PrintWriter out;
     private PublicKey clientePublic;
-    private ArrayList<ThreadParaCliente> clientes;
+    private ArrayList<Servidor> clientes;
 
-    public ThreadParaCliente(Socket socket, ArrayList<ThreadParaCliente> clientes) throws IOException {
+    public Servidor(Socket socket, ArrayList<Servidor> clientes) throws IOException {
         this.clienteSocket = socket;
         this.clientes = clientes;
         in = new BufferedReader(new InputStreamReader(clienteSocket.getInputStream()));
@@ -111,10 +110,10 @@ public class ThreadParaCliente extends Thread{
 
 
 
-            for (ThreadParaCliente cliente : clientes) {
+            for (Servidor cliente : clientes) {
                 if (cliente != this && cliente.topico == topico) {
                     String enLinea=cliente.nombreCliente + " está en línea.";
-                    String mensajeEncriptar= ThreadParaCliente.enviarMensajeSimetrico(enLinea,claveSimetrica, par.getPrivate());
+                    String mensajeEncriptar= Servidor.enviarMensajeSimetrico(enLinea,claveSimetrica, par.getPrivate());
                     cliente.out.println(mensajeEncriptar);
                 }
             }
@@ -123,20 +122,20 @@ public class ThreadParaCliente extends Thread{
             while (true) {
                 String mensaje = in.readLine();
 
-                String mensajeRecibido = nombreCliente + ": " + ThreadParaCliente.recibirMensajeSimetrico(mensaje,clientePublic,claveSimetrica);
+                String mensajeRecibido = nombreCliente + ": " + Servidor.recibirMensajeSimetrico(mensaje,clientePublic,claveSimetrica);
 
 
                 if (mensaje.equalsIgnoreCase("exit")) {
                     break;
                 }
 
-                for (ThreadParaCliente cliente : clientes) {
+                for (Servidor cliente : clientes) {
                     if (cliente != this && cliente.topico == topico) {
-                        String mensajeEncriptar= ThreadParaCliente.enviarMensajeSimetrico(mensajeRecibido, claveSimetrica, par.getPrivate());
+                        String mensajeEncriptar= Servidor.enviarMensajeSimetrico(mensajeRecibido, claveSimetrica, par.getPrivate());
                             cliente.out.println(mensajeEncriptar);
                     } else if (cliente==this) {
                         String ack="ACK";
-                        String mensajeEncriptar= ThreadParaCliente.enviarMensajeSimetrico(ack, claveSimetrica, par.getPrivate());
+                        String mensajeEncriptar= Servidor.enviarMensajeSimetrico(ack, claveSimetrica, par.getPrivate());
                         cliente.out.println(mensajeEncriptar);
                     }
 
@@ -167,9 +166,9 @@ public class ThreadParaCliente extends Thread{
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("Nueva conexión entrante.");
-                ThreadParaCliente threadParaCliente = new ThreadParaCliente(clientSocket, clients);
-                clients.add(threadParaCliente);
-                threadParaCliente.start();
+                Servidor servidor = new Servidor(clientSocket, clients);
+                clients.add(servidor);
+                servidor.start();
             }
         } catch (IOException e) {
             e.printStackTrace();
