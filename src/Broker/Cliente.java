@@ -1,19 +1,16 @@
-package ServidorNuevo;
+package Broker;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Scanner;
 
-public class Cliente3 {
+public class Cliente {
     private static final KeyPair par=FirmaDigital.generarparKeys();
     private PublicKey destino;
     private SecretKey claveSimetrica;
@@ -71,7 +68,7 @@ public class Cliente3 {
         return "NO SE PUEDE CONFIRMAR EL ORIGEN DEL MENSAJERO. POR LO TANTO, NO VA A RECIBIR EL MENSAJE GRACIAs";
     }
     public static void main(String[] args) {
-        Cliente3 cliente1=new Cliente3();
+        Cliente cliente1=new Cliente();
         Scanner scanner = new Scanner(System.in);
 
         System.out.print("Ingrese el puerto del servidor: ");
@@ -132,7 +129,7 @@ public class Cliente3 {
             }
 
 
-        } catch (IOException e) {
+         } catch (IOException e) {
             e.printStackTrace();
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
